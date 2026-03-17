@@ -1,0 +1,673 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.2.0
+  description: GovHold civic accountability platform API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: reports
+    description: Infrastructure report operations
+  - name: profile
+    description: User profile operations
+  - name: admin
+    description: Admin operations
+  - name: analytics
+    description: Analytics operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/user:
+    get:
+      operationId: getCurrentAuthUser
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetCurrentAuthUserResponse"
+
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+    post:
+      operationId: updateProfile
+      tags: [profile]
+      summary: Create or update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+
+  /users/{id}/stats:
+    get:
+      operationId: getUserStats
+      tags: [profile]
+      summary: Get public user report stats
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserStats"
+        "404":
+          description: User not found
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List all reports
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, oldest, confirmations]
+      responses:
+        "200":
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+    post:
+      operationId: createReport
+      tags: [reports]
+      summary: Submit a new report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReportBody"
+      responses:
+        "201":
+          description: Report created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "401":
+          description: Unauthorized
+
+  /reports/upload-image:
+    post:
+      operationId: uploadReportImage
+      tags: [reports]
+      summary: Upload report image
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+                - file
+      responses:
+        "200":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadImageResponse"
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get single report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "404":
+          description: Not found
+
+  /reports/{id}/confirm:
+    post:
+      operationId: confirmReport
+      tags: [reports]
+      summary: Confirm a report exists
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Confirmation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmReportResponse"
+        "401":
+          description: Unauthorized
+    delete:
+      operationId: unconfirmReport
+      tags: [reports]
+      summary: Remove confirmation from a report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Unconfirmation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmReportResponse"
+        "401":
+          description: Unauthorized
+
+  /admin/reports:
+    get:
+      operationId: adminListReports
+      tags: [admin]
+      summary: Admin - list all reports
+      responses:
+        "200":
+          description: All reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+        "401":
+          description: Unauthorized
+
+  /admin/reports/{id}:
+    patch:
+      operationId: adminUpdateReport
+      tags: [admin]
+      summary: Admin - update report status or highlight
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateReportBody"
+      responses:
+        "200":
+          description: Updated report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+    delete:
+      operationId: adminDeleteReport
+      tags: [admin]
+      summary: Admin - delete a report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: Admin - list all users
+      responses:
+        "200":
+          description: All users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /admin/users/{id}/set-admin:
+    post:
+      operationId: adminSetUserAdmin
+      tags: [admin]
+      summary: Admin - grant or revoke admin status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetUserAdminBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+  /analytics:
+    get:
+      operationId: getAnalytics
+      tags: [analytics]
+      summary: Get platform analytics
+      responses:
+        "200":
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsData"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        profileImageUrl:
+          type: string
+          nullable: true
+        isAdmin:
+          type: boolean
+      required: [id]
+
+    GetCurrentAuthUserResponse:
+      type: object
+      properties:
+        user:
+          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/AuthUser"
+      required: [user]
+
+    ExchangeMobileAuthorizationCodeBody:
+      type: object
+      properties:
+        code:
+          type: string
+        state:
+          type: string
+        codeVerifier:
+          type: string
+        nonce:
+          type: string
+        redirectUri:
+          type: string
+      required: [code, state, codeVerifier, nonce, redirectUri]
+
+    ExchangeMobileAuthorizationCodeResponse:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    LogoutMobileSessionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        profileImageUrl:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        state:
+          type: string
+          nullable: true
+        lga:
+          type: string
+          nullable: true
+        profileComplete:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, profileComplete, createdAt]
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        state:
+          type: string
+        lga:
+          type: string
+      required: [firstName, phone, state, lga]
+
+    UserStats:
+      type: object
+      properties:
+        userId:
+          type: string
+        reportsSubmitted:
+          type: integer
+        reportsConfirmed:
+          type: integer
+      required: [userId, reportsSubmitted, reportsConfirmed]
+
+    ReportCategory:
+      type: string
+      enum: [Road, Water, Electricity, School, Hospital, Other]
+
+    ReportStatus:
+      type: string
+      enum: [open, in_progress, resolved]
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          $ref: "#/components/schemas/ReportCategory"
+        status:
+          $ref: "#/components/schemas/ReportStatus"
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        videoUrl:
+          type: string
+          nullable: true
+        userId:
+          type: string
+          nullable: true
+        confirmationsCount:
+          type: integer
+        isHighlighted:
+          type: boolean
+        submittedBy:
+          nullable: true
+          type: object
+          properties:
+            id:
+              type: string
+            firstName:
+              type: string
+              nullable: true
+            lastName:
+              type: string
+              nullable: true
+            state:
+              type: string
+              nullable: true
+            lga:
+              type: string
+              nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, title, description, category, status, confirmationsCount, isHighlighted, createdAt]
+
+    CreateReportBody:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 200
+        description:
+          type: string
+          minLength: 10
+        category:
+          $ref: "#/components/schemas/ReportCategory"
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        videoUrl:
+          type: string
+          nullable: true
+      required: [title, description, category]
+
+    UploadImageResponse:
+      type: object
+      properties:
+        url:
+          type: string
+      required: [url]
+
+    ConfirmReportResponse:
+      type: object
+      properties:
+        confirmationsCount:
+          type: integer
+        confirmed:
+          type: boolean
+      required: [confirmationsCount, confirmed]
+
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        isAdmin:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, isAdmin, createdAt]
+
+    SetUserAdminBody:
+      type: object
+      properties:
+        isAdmin:
+          type: boolean
+      required: [isAdmin]
+
+    AdminUpdateReportBody:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/ReportStatus"
+        isHighlighted:
+          type: boolean
+
+    AnalyticsCategoryCount:
+      type: object
+      properties:
+        category:
+          type: string
+        count:
+          type: integer
+      required: [category, count]
+
+    AnalyticsStateCount:
+      type: object
+      properties:
+        state:
+          type: string
+        count:
+          type: integer
+      required: [state, count]
+
+    AnalyticsData:
+      type: object
+      properties:
+        totalReports:
+          type: integer
+        openReports:
+          type: integer
+        resolvedReports:
+          type: integer
+        totalUsers:
+          type: integer
+        reportsByCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsCategoryCount"
+        reportsByState:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsStateCount"
+      required: [totalReports, openReports, resolvedReports, totalUsers, reportsByCategory, reportsByState]

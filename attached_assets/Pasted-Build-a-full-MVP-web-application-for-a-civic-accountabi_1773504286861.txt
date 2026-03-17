@@ -1,0 +1,115 @@
+Build a full MVP web application for a civic accountability platform where citizens can report infrastructure problems in their community.
+
+TECH STACK
+- Backend: Python FastAPI
+- Database: SQLite using SQLAlchemy
+- Frontend: HTML, CSS, JavaScript with Jinja2 templates
+- Map integration: Leaflet.js with OpenStreetMap
+- File uploads for report images
+
+PROJECT STRUCTURE
+
+Create the following structure:
+
+main.py
+database.py
+models.py
+templates/
+    index.html
+    report.html
+    map.html
+static/
+    style.css
+uploads/
+
+FEATURES
+
+1. Home Page
+- Display all reports submitted by users
+- Show title, description, category, location, and image
+- Provide link to submit a new report
+- Provide link to view reports on a map
+
+2. Report Submission Page
+Allow users to submit a report with the following fields:
+
+- Title
+- Description
+- Category dropdown (Road, Water, Electricity, School, Hospital, Other)
+- Upload image
+- Capture latitude and longitude from browser geolocation
+- Submit report
+
+3. Backend API
+
+Create endpoints:
+
+GET /
+Return homepage showing all reports
+
+GET /report
+Return report submission page
+
+POST /report
+Handle report submission with image upload and save to database
+
+GET /map
+Display reports on a map
+
+4. Database Model
+
+Create a Report model with fields:
+
+id
+title
+description
+category
+latitude
+longitude
+image
+created_at
+
+5. Map Page
+
+Use Leaflet.js to:
+
+- Display OpenStreetMap
+- Place markers for each report
+- When clicking marker show:
+    report title
+    description
+    image
+    category
+
+6. Image Uploads
+
+- Store uploaded images in /uploads
+- Save image path in database
+- Display images in reports
+
+7. Styling
+
+Create simple responsive CSS with:
+
+- Clean card layout for reports
+- Button to submit report
+- Navigation bar with links:
+    Home
+    Submit Report
+    Map
+
+8. Admin Simplicity
+
+No authentication needed for MVP.
+
+Focus on functionality:
+- report infrastructure issues
+- upload photo evidence
+- show reports publicly
+- visualize reports on map.
+
+Ensure the application runs using:
+
+uvicorn main:app --reload
+
+Make sure the code is clean, well structured, and ready to run on Replit.

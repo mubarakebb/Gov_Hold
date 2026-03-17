@@ -1,0 +1,21 @@
+packages:
+  "react-leaflet": "Map component for React"
+  "leaflet": "Core map library"
+  "@types/leaflet": "Type definitions for leaflet"
+  "framer-motion": "Animations for page transitions and interactions"
+  "date-fns": "For formatting report dates nicely"
+  "react-hook-form": "Form state management"
+  "@hookform/resolvers": "Zod validation resolver for forms"
+  "lucide-react": "Icons for the UI"
+  "clsx": "Utility for conditionally joining classNames"
+  "tailwind-merge": "Utility for merging tailwind classes"
+
+images:
+  - path: "artifacts/govwatch/public/images/civic-hero.png"
+    description: "A clean, modern abstract geometric background in trustworthy government blues, whites, and subtle silver. Professional, architectural, and uplifting. Minimalist style with soft lighting."
+    aspect_ratio: "16:9"
+
+notes:
+  - "Importing API hooks directly from @workspace/api-client-react as instructed."
+  - "Leaflet CSS is imported in index.css."
+  - "Custom marker icons are configured to avoid 404s with default leaflet markers in Vite."
