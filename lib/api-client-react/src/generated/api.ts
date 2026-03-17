@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * GovHold civic accountability platform API
- * OpenAPI spec version: 0.2.0
+ * OpenAPI spec version: 0.3.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -19,19 +19,24 @@ import type {
 import type {
   AdminUpdateReportBody,
   AdminUser,
+  AdminVerifierApplication,
   AnalyticsData,
   ConfirmReportResponse,
   CreateReportBody,
   GetCurrentAuthUserResponse,
   HealthStatus,
   ListReportsParams,
+  RejectVerifierApplicationBody,
   Report,
+  ResolveReportResponse,
   SetUserAdminBody,
   UpdateProfileBody,
   UploadImageResponse,
   UploadReportImageBody,
   UserProfile,
   UserStats,
+  VerifierApplicationBody,
+  VerifierApplicationResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -963,6 +968,255 @@ export const useUnconfirmReport = <
 };
 
 /**
+ * @summary Mark a report as resolved (verifier only)
+ */
+export const getResolveReportUrl = (id: number) => {
+  return `/api/reports/${id}/resolve`;
+};
+
+export const resolveReport = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ResolveReportResponse> => {
+  return customFetch<ResolveReportResponse>(getResolveReportUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getResolveReportMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveReport>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resolveReport>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["resolveReport"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resolveReport>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return resolveReport(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResolveReportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resolveReport>>
+>;
+
+export type ResolveReportMutationError = ErrorType<void>;
+
+/**
+ * @summary Mark a report as resolved (verifier only)
+ */
+export const useResolveReport = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveReport>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resolveReport>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getResolveReportMutationOptions(options));
+};
+
+/**
+ * @summary Apply to become a verifier
+ */
+export const getApplyForVerifierUrl = () => {
+  return `/api/verifier/apply`;
+};
+
+export const applyForVerifier = async (
+  verifierApplicationBody: VerifierApplicationBody,
+  options?: RequestInit,
+): Promise<VerifierApplicationResponse> => {
+  return customFetch<VerifierApplicationResponse>(getApplyForVerifierUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(verifierApplicationBody),
+  });
+};
+
+export const getApplyForVerifierMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof applyForVerifier>>,
+    TError,
+    { data: BodyType<VerifierApplicationBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof applyForVerifier>>,
+  TError,
+  { data: BodyType<VerifierApplicationBody> },
+  TContext
+> => {
+  const mutationKey = ["applyForVerifier"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof applyForVerifier>>,
+    { data: BodyType<VerifierApplicationBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return applyForVerifier(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApplyForVerifierMutationResult = NonNullable<
+  Awaited<ReturnType<typeof applyForVerifier>>
+>;
+export type ApplyForVerifierMutationBody = BodyType<VerifierApplicationBody>;
+export type ApplyForVerifierMutationError = ErrorType<void>;
+
+/**
+ * @summary Apply to become a verifier
+ */
+export const useApplyForVerifier = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof applyForVerifier>>,
+    TError,
+    { data: BodyType<VerifierApplicationBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof applyForVerifier>>,
+  TError,
+  { data: BodyType<VerifierApplicationBody> },
+  TContext
+> => {
+  return useMutation(getApplyForVerifierMutationOptions(options));
+};
+
+/**
+ * @summary Get current user verifier application status
+ */
+export const getGetMyVerifierApplicationUrl = () => {
+  return `/api/verifier/my-application`;
+};
+
+export const getMyVerifierApplication = async (
+  options?: RequestInit,
+): Promise<VerifierApplicationResponse> => {
+  return customFetch<VerifierApplicationResponse>(
+    getGetMyVerifierApplicationUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetMyVerifierApplicationQueryKey = () => {
+  return [`/api/verifier/my-application`] as const;
+};
+
+export const getGetMyVerifierApplicationQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyVerifierApplication>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyVerifierApplication>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetMyVerifierApplicationQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMyVerifierApplication>>
+  > = ({ signal }) => getMyVerifierApplication({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyVerifierApplication>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMyVerifierApplicationQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyVerifierApplication>>
+>;
+export type GetMyVerifierApplicationQueryError = ErrorType<void>;
+
+/**
+ * @summary Get current user verifier application status
+ */
+
+export function useGetMyVerifierApplication<
+  TData = Awaited<ReturnType<typeof getMyVerifierApplication>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyVerifierApplication>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMyVerifierApplicationQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Admin - list all reports
  */
 export const getAdminListReportsUrl = () => {
@@ -1368,6 +1622,266 @@ export const useAdminSetUserAdmin = <
   TContext
 > => {
   return useMutation(getAdminSetUserAdminMutationOptions(options));
+};
+
+/**
+ * @summary Admin - list verifier applications
+ */
+export const getAdminListVerifierApplicationsUrl = () => {
+  return `/api/admin/verifier-applications`;
+};
+
+export const adminListVerifierApplications = async (
+  options?: RequestInit,
+): Promise<AdminVerifierApplication[]> => {
+  return customFetch<AdminVerifierApplication[]>(
+    getAdminListVerifierApplicationsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getAdminListVerifierApplicationsQueryKey = () => {
+  return [`/api/admin/verifier-applications`] as const;
+};
+
+export const getAdminListVerifierApplicationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListVerifierApplications>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListVerifierApplications>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminListVerifierApplicationsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListVerifierApplications>>
+  > = ({ signal }) =>
+    adminListVerifierApplications({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListVerifierApplications>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListVerifierApplicationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListVerifierApplications>>
+>;
+export type AdminListVerifierApplicationsQueryError = ErrorType<void>;
+
+/**
+ * @summary Admin - list verifier applications
+ */
+
+export function useAdminListVerifierApplications<
+  TData = Awaited<ReturnType<typeof adminListVerifierApplications>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListVerifierApplications>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListVerifierApplicationsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Admin - approve a verifier application
+ */
+export const getAdminApproveVerifierApplicationUrl = (id: number) => {
+  return `/api/admin/verifier-applications/${id}/approve`;
+};
+
+export const adminApproveVerifierApplication = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AdminVerifierApplication> => {
+  return customFetch<AdminVerifierApplication>(
+    getAdminApproveVerifierApplicationUrl(id),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getAdminApproveVerifierApplicationMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminApproveVerifierApplication>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminApproveVerifierApplication>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminApproveVerifierApplication"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminApproveVerifierApplication>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminApproveVerifierApplication(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminApproveVerifierApplicationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminApproveVerifierApplication>>
+>;
+
+export type AdminApproveVerifierApplicationMutationError = ErrorType<void>;
+
+/**
+ * @summary Admin - approve a verifier application
+ */
+export const useAdminApproveVerifierApplication = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminApproveVerifierApplication>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminApproveVerifierApplication>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(
+    getAdminApproveVerifierApplicationMutationOptions(options),
+  );
+};
+
+/**
+ * @summary Admin - reject a verifier application
+ */
+export const getAdminRejectVerifierApplicationUrl = (id: number) => {
+  return `/api/admin/verifier-applications/${id}/reject`;
+};
+
+export const adminRejectVerifierApplication = async (
+  id: number,
+  rejectVerifierApplicationBody?: RejectVerifierApplicationBody,
+  options?: RequestInit,
+): Promise<AdminVerifierApplication> => {
+  return customFetch<AdminVerifierApplication>(
+    getAdminRejectVerifierApplicationUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(rejectVerifierApplicationBody),
+    },
+  );
+};
+
+export const getAdminRejectVerifierApplicationMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminRejectVerifierApplication>>,
+    TError,
+    { id: number; data: BodyType<RejectVerifierApplicationBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminRejectVerifierApplication>>,
+  TError,
+  { id: number; data: BodyType<RejectVerifierApplicationBody> },
+  TContext
+> => {
+  const mutationKey = ["adminRejectVerifierApplication"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminRejectVerifierApplication>>,
+    { id: number; data: BodyType<RejectVerifierApplicationBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminRejectVerifierApplication(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminRejectVerifierApplicationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminRejectVerifierApplication>>
+>;
+export type AdminRejectVerifierApplicationMutationBody =
+  BodyType<RejectVerifierApplicationBody>;
+export type AdminRejectVerifierApplicationMutationError = ErrorType<void>;
+
+/**
+ * @summary Admin - reject a verifier application
+ */
+export const useAdminRejectVerifierApplication = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminRejectVerifierApplication>>,
+    TError,
+    { id: number; data: BodyType<RejectVerifierApplicationBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminRejectVerifierApplication>>,
+  TError,
+  { id: number; data: BodyType<RejectVerifierApplicationBody> },
+  TContext
+> => {
+  return useMutation(getAdminRejectVerifierApplicationMutationOptions(options));
 };
 
 /**

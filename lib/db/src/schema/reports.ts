@@ -14,6 +14,7 @@ export const reportsTable = pgTable("reports", {
   videoUrl: text("video_url"),
   userId: varchar("user_id"),
   confirmationsCount: integer("confirmations_count").notNull().default(0),
+  resolvedCount: integer("resolved_count").notNull().default(0),
   reportersCount: integer("reporters_count").notNull().default(1),
   isHighlighted: boolean("is_highlighted").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

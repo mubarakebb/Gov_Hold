@@ -1,6 +1,7 @@
 import * as oidc from "openid-client";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { GetCurrentAuthUserResponse } from "@workspace/api-zod";
 
 import { db, usersTable } from "@workspace/db";
@@ -102,10 +103,31 @@ async function upsertUser(claims: Record<string, unknown>) {
   return user;
 }
 
-router.get("/auth/user", (req: Request, res: Response) => {
+router.get("/auth/user", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) {
+    res.json(GetCurrentAuthUserResponse.parse({ user: null }));
+    return;
+  }
+
+  const [freshUser] = await db
+    .select({
+      id: usersTable.id,
+      email: usersTable.email,
+      firstName: usersTable.firstName,
+      lastName: usersTable.lastName,
+      profileImageUrl: usersTable.profileImageUrl,
+      isAdmin: usersTable.isAdmin,
+      isVerifier: usersTable.isVerifier,
+      verifierType: usersTable.verifierType,
+      verifierState: usersTable.verifierState,
+      verifierLga: usersTable.verifierLga,
+    })
+    .from(usersTable)
+    .where(eq(usersTable.id, req.user.id));
+
   res.json(
     GetCurrentAuthUserResponse.parse({
-      user: req.isAuthenticated() ? req.user : null,
+      user: freshUser ?? null,
     }),
   );
 });
@@ -197,6 +219,10 @@ router.get("/callback", async (req: Request, res: Response) => {
       lastName: dbUser.lastName,
       profileImageUrl: dbUser.profileImageUrl,
       isAdmin: dbUser.isAdmin,
+      isVerifier: dbUser.isVerifier,
+      verifierType: dbUser.verifierType,
+      verifierState: dbUser.verifierState,
+      verifierLga: dbUser.verifierLga,
     },
     access_token: tokens.access_token,
     refresh_token: tokens.refresh_token,
@@ -268,6 +294,10 @@ router.post(
           lastName: dbUser.lastName,
           profileImageUrl: dbUser.profileImageUrl,
           isAdmin: dbUser.isAdmin,
+          isVerifier: dbUser.isVerifier,
+          verifierType: dbUser.verifierType,
+          verifierState: dbUser.verifierState,
+          verifierLga: dbUser.verifierLga,
         },
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,

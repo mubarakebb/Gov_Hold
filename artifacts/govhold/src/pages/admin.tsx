@@ -7,9 +7,12 @@ import {
   useAdminDeleteReport,
   useAdminListUsers,
   useAdminSetUserAdmin,
+  useAdminListVerifierApplications,
+  useAdminApproveVerifierApplication,
+  useAdminRejectVerifierApplication,
 } from "@workspace/api-client-react";
 import { formatDistanceToNow } from "date-fns";
-import { Star, StarOff, Trash2, AlertCircle, Clock, CheckCircle2, LogIn, Shield, Users } from "lucide-react";
+import { Star, StarOff, Trash2, AlertCircle, Clock, CheckCircle2, LogIn, Shield, Users, ShieldCheck, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Status = "open" | "in_progress" | "resolved";
@@ -32,16 +35,25 @@ const statusIcon: Record<Status, React.ElementType> = {
   resolved: CheckCircle2,
 };
 
+const applicationStatusBadge: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700",
+  approved: "bg-emerald-100 text-emerald-700",
+  rejected: "bg-red-100 text-red-700",
+};
+
 export function Admin() {
   const { user, isAuthenticated, isLoading: authLoading, login } = useAuth();
   const isAdmin = !!user?.isAdmin;
-  const [activeTab, setActiveTab] = useState<"reports" | "users">("reports");
+  const [activeTab, setActiveTab] = useState<"reports" | "users" | "verifiers">("reports");
   const { data: reports, isLoading, refetch } = useAdminListReports({ query: { enabled: isAdmin } });
   const updateReport = useAdminUpdateReport();
   const deleteReport = useAdminDeleteReport();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { data: users, isLoading: usersLoading, refetch: refetchUsers } = useAdminListUsers({ query: { enabled: isAdmin && activeTab === "users" } });
   const setUserAdmin = useAdminSetUserAdmin();
+  const { data: verifierApps, isLoading: verifierAppsLoading, refetch: refetchVerifierApps } = useAdminListVerifierApplications({ query: { enabled: isAdmin && activeTab === "verifiers" } });
+  const approveApp = useAdminApproveVerifierApplication();
+  const rejectApp = useAdminRejectVerifierApplication();
 
   async function handleStatusChange(id: string, status: Status) {
     await updateReport.mutateAsync({ id, data: { status } });
@@ -59,6 +71,19 @@ export function Admin() {
     await deleteReport.mutateAsync({ id });
     setDeletingId(null);
     refetch();
+  }
+
+  async function handleApprove(id: number) {
+    await approveApp.mutateAsync({ id });
+    refetchVerifierApps();
+    refetchUsers();
+  }
+
+  async function handleReject(id: number) {
+    const reason = prompt("Reason for rejection (optional):");
+    await rejectApp.mutateAsync({ id, data: { reason: reason || null } });
+    refetchVerifierApps();
+    refetchUsers();
   }
 
   if (authLoading) {
@@ -97,15 +122,17 @@ export function Admin() {
     );
   }
 
+  const pendingCount = verifierApps?.filter(a => a.status === "pending").length ?? 0;
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 py-10">
         <div className="mb-6">
           <h1 className="font-display font-bold text-3xl mb-1">Admin Panel</h1>
-          <p className="text-muted-foreground">Manage reports and users on the platform.</p>
+          <p className="text-muted-foreground">Manage reports, users, and verifier applications.</p>
         </div>
 
-        <div className="flex gap-2 mb-6 border-b border-border">
+        <div className="flex gap-2 mb-6 border-b border-border flex-wrap">
           <button
             onClick={() => setActiveTab("reports")}
             className={cn(
@@ -123,6 +150,18 @@ export function Admin() {
             )}
           >
             <Users className="w-4 h-4" /> Users
+          </button>
+          <button
+            onClick={() => setActiveTab("verifiers")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+              activeTab === "verifiers" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <ShieldCheck className="w-4 h-4" /> Verifier Applications
+            {pendingCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded-full">{pendingCount}</span>
+            )}
           </button>
         </div>
 
@@ -144,6 +183,7 @@ export function Admin() {
                       <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Status</th>
                       <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Submitted By</th>
                       <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Confirms</th>
+                      <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Resolved</th>
                       <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Date</th>
                       <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Actions</th>
                     </tr>
@@ -185,6 +225,7 @@ export function Admin() {
                           </td>
                           <td className="px-4 py-3 text-muted-foreground">{submitterName}</td>
                           <td className="px-4 py-3 text-center font-semibold">{report.confirmationsCount ?? 0}</td>
+                          <td className="px-4 py-3 text-center font-semibold text-emerald-600">{(report as { resolvedCount?: number }).resolvedCount ?? 0}</td>
                           <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
                             {report.createdAt ? formatDistanceToNow(new Date(report.createdAt), { addSuffix: true }) : "—"}
                           </td>
@@ -238,6 +279,7 @@ export function Admin() {
                       <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Name</th>
                       <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Email</th>
                       <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Joined</th>
+                      <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Roles</th>
                       <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Admin</th>
                     </tr>
                   </thead>
@@ -245,6 +287,7 @@ export function Admin() {
                     {users.map((u) => {
                       const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || "—";
                       const isSelf = u.id === user?.id;
+                      const verifierUser = u as typeof u & { isVerifier?: boolean; verifierType?: string | null; verifierState?: string | null; verifierLga?: string | null };
                       return (
                         <tr key={u.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                           <td className="px-4 py-3 font-medium">
@@ -254,6 +297,14 @@ export function Admin() {
                           <td className="px-4 py-3 text-muted-foreground">{u.email ?? "—"}</td>
                           <td className="px-4 py-3 text-muted-foreground text-xs">
                             {formatDistanceToNow(new Date(u.createdAt), { addSuffix: true })}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {verifierUser.isVerifier && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
+                                <ShieldCheck className="w-3 h-3" />
+                                Verifier ({verifierUser.verifierType === "state" ? verifierUser.verifierState : `${verifierUser.verifierLga}, ${verifierUser.verifierState}`})
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-center">
                             <button
@@ -272,6 +323,86 @@ export function Admin() {
                             >
                               {u.isAdmin ? "Admin" : "User"}
                             </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        )}
+
+        {activeTab === "verifiers" && (
+          verifierAppsLoading ? (
+            <div className="flex items-center justify-center py-24">
+              <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            </div>
+          ) : !verifierApps?.length ? (
+            <div className="text-center py-16 text-muted-foreground">No verifier applications yet.</div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50">
+                      <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Applicant</th>
+                      <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Type</th>
+                      <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Coverage Area</th>
+                      <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Applied</th>
+                      <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Status</th>
+                      <th className="text-center px-4 py-3 font-semibold text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {verifierApps.map((app) => {
+                      const appWithMeta = app as typeof app & { applicant?: { firstName?: string | null; lastName?: string | null; email?: string | null } | null };
+                      const applicantName = appWithMeta.applicant
+                        ? [appWithMeta.applicant.firstName, appWithMeta.applicant.lastName].filter(Boolean).join(" ") || appWithMeta.applicant.email || "—"
+                        : "—";
+                      const coverage = app.type === "state"
+                        ? `${app.state} (State-wide)`
+                        : `${app.lga ?? "?"}, ${app.state} (LGA)`;
+                      return (
+                        <tr key={app.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-3 font-medium">{applicantName}</td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-muted capitalize">{app.type}</span>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">{coverage}</td>
+                          <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+                            {formatDistanceToNow(new Date(app.createdAt), { addSuffix: true })}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold capitalize", applicationStatusBadge[app.status] ?? "bg-muted text-muted-foreground")}>
+                              {app.status}
+                            </span>
+                            {app.reason && (
+                              <p className="text-xs text-muted-foreground mt-0.5 max-w-[150px] truncate" title={app.reason}>
+                                Reason: {app.reason}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {app.status === "pending" && (
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => handleApprove(app.id)}
+                                  disabled={approveApp.isPending}
+                                  className="flex items-center gap-1 px-3 py-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
+                                >
+                                  <Check className="w-3.5 h-3.5" /> Approve
+                                </button>
+                                <button
+                                  onClick={() => handleReject(app.id)}
+                                  disabled={rejectApp.isPending}
+                                  className="flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
+                                >
+                                  <X className="w-3.5 h-3.5" /> Reject
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );

@@ -3,11 +3,13 @@
  * Do not edit manually.
  * Api
  * GovHold civic accountability platform API
- * OpenAPI spec version: 0.2.0
+ * OpenAPI spec version: 0.3.0
  */
 
 export * from "./adminUpdateReportBody";
 export * from "./adminUser";
+export * from "./adminVerifierApplication";
+export * from "./adminVerifierApplicationApplicant";
 export * from "./analyticsCategoryCount";
 export * from "./analyticsData";
 export * from "./analyticsStateCount";
@@ -21,13 +23,18 @@ export * from "./healthStatus";
 export * from "./listReportsParams";
 export * from "./listReportsSort";
 export * from "./logoutMobileSessionResponse";
+export * from "./rejectVerifierApplicationBody";
 export * from "./report";
 export * from "./reportCategory";
 export * from "./reportStatus";
 export * from "./reportSubmittedBy";
+export * from "./resolveReportResponse";
 export * from "./setUserAdminBody";
 export * from "./updateProfileBody";
 export * from "./uploadImageResponse";
 export * from "./uploadReportImageBody";
 export * from "./userProfile";
 export * from "./userStats";
+export * from "./verifierApplicationBody";
+export * from "./verifierApplicationBodyType";
+export * from "./verifierApplicationResponse";

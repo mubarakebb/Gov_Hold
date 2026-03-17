@@ -5,6 +5,7 @@ import reportsRouter from "./reports";
 import profileRouter from "./profile";
 import adminRouter from "./admin";
 import analyticsRouter from "./analytics";
+import verifierRouter from "./verifier";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(reportsRouter);
 router.use(profileRouter);
 router.use(adminRouter);
 router.use(analyticsRouter);
+router.use(verifierRouter);
 
 export default router;

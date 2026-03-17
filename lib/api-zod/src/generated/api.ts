@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * GovHold civic accountability platform API
- * OpenAPI spec version: 0.2.0
+ * OpenAPI spec version: 0.3.0
  */
 import * as zod from "zod";
 
@@ -25,7 +25,11 @@ export const GetCurrentAuthUserResponse = zod.object({
       firstName: zod.string().nullish(),
       lastName: zod.string().nullish(),
       profileImageUrl: zod.string().nullish(),
-      isAdmin: zod.boolean().optional(),
+      isAdmin: zod.boolean(),
+      isVerifier: zod.boolean(),
+      verifierType: zod.string().nullish(),
+      verifierState: zod.string().nullish(),
+      verifierLga: zod.string().nullish(),
     })
     .nullable(),
 });
@@ -111,6 +115,7 @@ export const ListReportsResponseItem = zod.object({
   videoUrl: zod.string().nullish(),
   userId: zod.string().nullish(),
   confirmationsCount: zod.number(),
+  resolvedCount: zod.number(),
   isHighlighted: zod.boolean(),
   submittedBy: zod
     .object({
@@ -190,6 +195,7 @@ export const GetReportResponse = zod.object({
   videoUrl: zod.string().nullish(),
   userId: zod.string().nullish(),
   confirmationsCount: zod.number(),
+  resolvedCount: zod.number(),
   isHighlighted: zod.boolean(),
   submittedBy: zod
     .object({
@@ -228,6 +234,50 @@ export const UnconfirmReportResponse = zod.object({
 });
 
 /**
+ * @summary Mark a report as resolved (verifier only)
+ */
+export const ResolveReportParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ResolveReportResponse = zod.object({
+  resolvedCount: zod.number(),
+  resolved: zod.boolean(),
+});
+
+/**
+ * @summary Apply to become a verifier
+ */
+export const ApplyForVerifierBody = zod.object({
+  type: zod.enum(["lga", "state"]),
+  state: zod.string(),
+  lga: zod.string().nullish(),
+});
+
+export const ApplyForVerifierResponse = zod.object({
+  id: zod.number(),
+  type: zod.string(),
+  state: zod.string(),
+  lga: zod.string().nullish(),
+  status: zod.string(),
+  reason: zod.string().nullish(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Get current user verifier application status
+ */
+export const GetMyVerifierApplicationResponse = zod.object({
+  id: zod.number(),
+  type: zod.string(),
+  state: zod.string(),
+  lga: zod.string().nullish(),
+  status: zod.string(),
+  reason: zod.string().nullish(),
+  createdAt: zod.date(),
+});
+
+/**
  * @summary Admin - list all reports
  */
 export const AdminListReportsResponseItem = zod.object({
@@ -249,6 +299,7 @@ export const AdminListReportsResponseItem = zod.object({
   videoUrl: zod.string().nullish(),
   userId: zod.string().nullish(),
   confirmationsCount: zod.number(),
+  resolvedCount: zod.number(),
   isHighlighted: zod.boolean(),
   submittedBy: zod
     .object({
@@ -294,6 +345,7 @@ export const AdminUpdateReportResponse = zod.object({
   videoUrl: zod.string().nullish(),
   userId: zod.string().nullish(),
   confirmationsCount: zod.number(),
+  resolvedCount: zod.number(),
   isHighlighted: zod.boolean(),
   submittedBy: zod
     .object({
@@ -323,6 +375,10 @@ export const AdminListUsersResponseItem = zod.object({
   firstName: zod.string().nullish(),
   lastName: zod.string().nullish(),
   isAdmin: zod.boolean(),
+  isVerifier: zod.boolean(),
+  verifierType: zod.string().nullish(),
+  verifierState: zod.string().nullish(),
+  verifierLga: zod.string().nullish(),
   createdAt: zod.date(),
 });
 export const AdminListUsersResponse = zod.array(AdminListUsersResponseItem);
@@ -344,7 +400,89 @@ export const AdminSetUserAdminResponse = zod.object({
   firstName: zod.string().nullish(),
   lastName: zod.string().nullish(),
   isAdmin: zod.boolean(),
+  isVerifier: zod.boolean(),
+  verifierType: zod.string().nullish(),
+  verifierState: zod.string().nullish(),
+  verifierLga: zod.string().nullish(),
   createdAt: zod.date(),
+});
+
+/**
+ * @summary Admin - list verifier applications
+ */
+export const AdminListVerifierApplicationsResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  type: zod.string(),
+  state: zod.string(),
+  lga: zod.string().nullish(),
+  status: zod.string(),
+  reason: zod.string().nullish(),
+  createdAt: zod.date(),
+  applicant: zod
+    .object({
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+      email: zod.string().nullish(),
+    })
+    .nullish(),
+});
+export const AdminListVerifierApplicationsResponse = zod.array(
+  AdminListVerifierApplicationsResponseItem,
+);
+
+/**
+ * @summary Admin - approve a verifier application
+ */
+export const AdminApproveVerifierApplicationParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminApproveVerifierApplicationResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  type: zod.string(),
+  state: zod.string(),
+  lga: zod.string().nullish(),
+  status: zod.string(),
+  reason: zod.string().nullish(),
+  createdAt: zod.date(),
+  applicant: zod
+    .object({
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+      email: zod.string().nullish(),
+    })
+    .nullish(),
+});
+
+/**
+ * @summary Admin - reject a verifier application
+ */
+export const AdminRejectVerifierApplicationParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminRejectVerifierApplicationBody = zod.object({
+  reason: zod.string().nullish(),
+});
+
+export const AdminRejectVerifierApplicationResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  type: zod.string(),
+  state: zod.string(),
+  lga: zod.string().nullish(),
+  status: zod.string(),
+  reason: zod.string().nullish(),
+  createdAt: zod.date(),
+  applicant: zod
+    .object({
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+      email: zod.string().nullish(),
+    })
+    .nullish(),
 });
 
 /**

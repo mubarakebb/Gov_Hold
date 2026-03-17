@@ -6,7 +6,12 @@
  * OpenAPI spec version: 0.3.0
  */
 
-export interface AnalyticsStateCount {
+export interface VerifierApplicationResponse {
+  id: number;
+  type: string;
   state: string;
-  count: number;
+  lga?: string | null;
+  status: string;
+  reason?: string | null;
+  createdAt: Date;
 }

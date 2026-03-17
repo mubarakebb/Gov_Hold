@@ -2,11 +2,17 @@ import { useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
   X, MapPin, Calendar, Tag, ThumbsUp, Users, Image as ImageIcon,
-  AlertCircle, Clock, CheckCircle2, ExternalLink
+  AlertCircle, Clock, CheckCircle2, ExternalLink, ShieldCheck
 } from "lucide-react";
-import { type Report, useConfirmReport, useUnconfirmReport } from "@workspace/api-client-react";
+import {
+  type Report,
+  useConfirmReport,
+  useUnconfirmReport,
+  useResolveReport,
+} from "@workspace/api-client-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { cn } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
 
 const statusConfig = {
   open: { label: "Open", icon: AlertCircle, className: "bg-red-100 text-red-700 border-red-200" },
@@ -59,23 +65,45 @@ export function ReportDetailModal({ report, onClose }: Props) {
     };
   }, [report, onClose]);
 
-  const { isAuthenticated, login } = useAuth();
-  const confirmMutation = useConfirmReport();
-  const unconfirmMutation = useUnconfirmReport();
+  const { isAuthenticated, login, user } = useAuth();
+  const queryClient = useQueryClient();
+  const confirmMutation = useConfirmReport({
+    mutation: {
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["listReports"] }); },
+    },
+  });
+  const unconfirmMutation = useUnconfirmReport({
+    mutation: {
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["listReports"] }); },
+    },
+  });
+  const resolveMutation = useResolveReport({
+    mutation: {
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["listReports"] }); },
+    },
+  });
 
   if (!report) return null;
 
   const status = statusConfig[report.status as keyof typeof statusConfig] ?? statusConfig.open;
   const StatusIcon = status.icon;
+  const isVerifier = (user as { isVerifier?: boolean } | null)?.isVerifier;
+  const isAdmin = user?.isAdmin;
+  const canResolve = isVerifier || isAdmin;
 
   function handleConfirm() {
     if (!isAuthenticated) { login(); return; }
-    confirmMutation.mutate({ id: String(report!.id) });
+    confirmMutation.mutate({ id: report!.id });
   }
 
   function handleUnconfirm() {
     if (!isAuthenticated) { login(); return; }
-    unconfirmMutation.mutate({ id: String(report!.id) });
+    unconfirmMutation.mutate({ id: report!.id });
+  }
+
+  function handleResolve() {
+    if (!isAuthenticated) { login(); return; }
+    resolveMutation.mutate({ id: report!.id });
   }
 
   const mapUrl = report.latitude && report.longitude
@@ -91,22 +119,20 @@ export function ReportDetailModal({ report, onClose }: Props) {
     report.submittedBy?.state
   ].filter(Boolean).join(", ");
 
+  const resolvedCount = (report as { resolvedCount?: number }).resolvedCount ?? 0;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Panel */}
       <div className="relative z-10 w-full sm:max-w-2xl max-h-[92vh] bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-        {/* Drag handle (mobile) */}
         <div className="sm:hidden flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-muted-foreground/20" />
         </div>
 
-        {/* Close button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/10 hover:bg-black/20 text-white transition-colors"
@@ -114,7 +140,6 @@ export function ReportDetailModal({ report, onClose }: Props) {
           <X className="w-4 h-4" />
         </button>
 
-        {/* Image */}
         <div className="relative h-52 sm:h-64 bg-muted flex-shrink-0">
           {report.imageUrl ? (
             <img src={report.imageUrl} alt={report.title} className="w-full h-full object-cover" />
@@ -125,7 +150,6 @@ export function ReportDetailModal({ report, onClose }: Props) {
             </div>
           )}
 
-          {/* Status badge over image */}
           <div className="absolute bottom-3 left-4 flex gap-2">
             <span className={cn("flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border bg-white/95 shadow-sm", status.className)}>
               <StatusIcon className="w-3.5 h-3.5" />
@@ -139,9 +163,7 @@ export function ReportDetailModal({ report, onClose }: Props) {
           </div>
         </div>
 
-        {/* Content — scrollable */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
-          {/* Title + category */}
           <div>
             <div className="flex items-start justify-between gap-3 mb-2">
               <h2 className="font-display font-bold text-xl leading-tight flex-1">{report.title}</h2>
@@ -150,22 +172,18 @@ export function ReportDetailModal({ report, onClose }: Props) {
               </span>
             </div>
 
-            {/* Reporter attribution */}
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Users className="w-3.5 h-3.5" />
               <span className="font-medium text-foreground/80">{formatReporters(report)}</span>
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Description</h3>
             <p className="text-sm leading-relaxed text-foreground/80">{report.description}</p>
           </div>
 
-          {/* Details grid */}
           <div className="grid grid-cols-2 gap-3">
-            {/* Location */}
             <div className="col-span-2 sm:col-span-1 bg-muted/50 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-1">
                 <MapPin className="w-3.5 h-3.5 text-primary/70" />
@@ -186,7 +204,6 @@ export function ReportDetailModal({ report, onClose }: Props) {
               )}
             </div>
 
-            {/* Date */}
             <div className="bg-muted/50 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-1">
                 <Calendar className="w-3.5 h-3.5 text-primary/70" />
@@ -195,7 +212,6 @@ export function ReportDetailModal({ report, onClose }: Props) {
               <p className="text-sm font-medium">{formatDistanceToNow(new Date(report.createdAt), { addSuffix: true })}</p>
             </div>
 
-            {/* Reporters */}
             <div className="bg-muted/50 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-1">
                 <Users className="w-3.5 h-3.5 text-primary/70" />
@@ -204,7 +220,6 @@ export function ReportDetailModal({ report, onClose }: Props) {
               <p className="text-sm font-medium">{report.reportersCount ?? 1} {(report.reportersCount ?? 1) === 1 ? "person" : "people"}</p>
             </div>
 
-            {/* Category */}
             <div className="bg-muted/50 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-1">
                 <Tag className="w-3.5 h-3.5 text-primary/70" />
@@ -214,12 +229,10 @@ export function ReportDetailModal({ report, onClose }: Props) {
             </div>
           </div>
 
-          {/* Co-reporters list (if any) */}
           {report.reporters && report.reporters.length > 0 && (
             <div>
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">All Reporters</h3>
               <div className="flex flex-wrap gap-2">
-                {/* Original reporter */}
                 {report.submittedBy?.firstName && (
                   <span className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-semibold">
                     <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold">
@@ -228,7 +241,6 @@ export function ReportDetailModal({ report, onClose }: Props) {
                     {[report.submittedBy.firstName, report.submittedBy.lastName].filter(Boolean).join(" ")}
                   </span>
                 )}
-                {/* Co-reporters */}
                 {report.reporters.map((r) => (
                   <span key={r.id} className="flex items-center gap-1.5 px-3 py-1.5 bg-muted text-muted-foreground rounded-full text-xs font-semibold">
                     <div className="w-4 h-4 rounded-full bg-muted-foreground/20 flex items-center justify-center text-[10px] font-bold">
@@ -242,28 +254,47 @@ export function ReportDetailModal({ report, onClose }: Props) {
           )}
         </div>
 
-        {/* Footer — confirm action */}
-        <div className="flex-shrink-0 border-t border-border px-5 py-4 flex items-center justify-between gap-3 bg-white">
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <ThumbsUp className="w-4 h-4" />
-            <span><strong className="text-foreground">{report.confirmationsCount}</strong> confirmation{report.confirmationsCount !== 1 ? "s" : ""}</span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleUnconfirm}
-              className="px-4 py-2 text-sm rounded-xl border border-border hover:bg-muted transition-colors font-medium"
-              disabled={unconfirmMutation.isPending}
-            >
-              Remove
-            </button>
-            <button
-              onClick={handleConfirm}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors font-medium"
-              disabled={confirmMutation.isPending}
-            >
-              <ThumbsUp className="w-3.5 h-3.5" />
-              Confirm this issue
-            </button>
+        <div className="flex-shrink-0 border-t border-border px-5 py-4 bg-white">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <ThumbsUp className="w-4 h-4" />
+                <span><strong className="text-foreground">{report.confirmationsCount}</strong> confirmation{report.confirmationsCount !== 1 ? "s" : ""}</span>
+              </div>
+              {resolvedCount > 0 && (
+                <div className="flex items-center gap-1.5 text-emerald-600">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span><strong>{resolvedCount}</strong> verified resolved</span>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {canResolve && report.status !== "resolved" && (
+                <button
+                  onClick={handleResolve}
+                  className="flex items-center gap-2 px-4 py-2 text-sm bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-medium"
+                  disabled={resolveMutation.isPending}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Issue Resolved
+                </button>
+              )}
+              <button
+                onClick={handleUnconfirm}
+                className="px-4 py-2 text-sm rounded-xl border border-border hover:bg-muted transition-colors font-medium"
+                disabled={unconfirmMutation.isPending}
+              >
+                Remove Confirmation
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors font-medium"
+                disabled={confirmMutation.isPending}
+              >
+                <ThumbsUp className="w-3.5 h-3.5" />
+                Confirm this issue
+              </button>
+            </div>
           </div>
         </div>
       </div>

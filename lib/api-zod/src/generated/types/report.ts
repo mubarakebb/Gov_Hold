@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * GovHold civic accountability platform API
- * OpenAPI spec version: 0.2.0
+ * OpenAPI spec version: 0.3.0
  */
 import type { ReportCategory } from "./reportCategory";
 import type { ReportStatus } from "./reportStatus";
@@ -21,6 +21,7 @@ export interface Report {
   videoUrl?: string | null;
   userId?: string | null;
   confirmationsCount: number;
+  resolvedCount: number;
   isHighlighted: boolean;
   submittedBy?: ReportSubmittedBy;
   createdAt: Date;

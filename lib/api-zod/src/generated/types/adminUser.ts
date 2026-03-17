@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * GovHold civic accountability platform API
- * OpenAPI spec version: 0.2.0
+ * OpenAPI spec version: 0.3.0
  */
 
 export interface AdminUser {
@@ -12,5 +12,9 @@ export interface AdminUser {
   firstName?: string | null;
   lastName?: string | null;
   isAdmin: boolean;
+  isVerifier: boolean;
+  verifierType?: string | null;
+  verifierState?: string | null;
+  verifierLga?: string | null;
   createdAt: Date;
 }

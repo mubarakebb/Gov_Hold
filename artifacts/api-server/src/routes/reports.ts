@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, asc, sql, and, between } from "drizzle-orm";
+import { eq, desc, asc, sql, and } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import { db, reportsTable, usersTable, reportConfirmationsTable, reportReportersTable } from "@workspace/db";
@@ -13,6 +13,8 @@ import {
   ConfirmReportResponse,
   UnconfirmReportParams,
   UnconfirmReportResponse,
+  ResolveReportParams,
+  ResolveReportResponse,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -53,6 +55,7 @@ const reportWithUserSelect = {
   videoUrl: reportsTable.videoUrl,
   userId: reportsTable.userId,
   confirmationsCount: reportsTable.confirmationsCount,
+  resolvedCount: reportsTable.resolvedCount,
   reportersCount: reportsTable.reportersCount,
   isHighlighted: reportsTable.isHighlighted,
   createdAt: reportsTable.createdAt,
@@ -132,7 +135,6 @@ router.get("/reports/check-duplicate", async (req, res): Promise<void> => {
 
   const reports = await queryBuilder.orderBy(desc(reportsTable.createdAt));
 
-  // Filter by proximity or title similarity in JS for flexibility
   const latNum = lat ? parseFloat(lat) : null;
   const lngNum = lng ? parseFloat(lng) : null;
 
@@ -144,7 +146,6 @@ router.get("/reports/check-duplicate", async (req, res): Promise<void> => {
       )
     : [];
 
-  // Title similarity: shared words of 4+ chars
   const titleWords = title
     ? title.toLowerCase().split(/\s+/).filter(w => w.length >= 4)
     : [];
@@ -157,7 +158,6 @@ router.get("/reports/check-duplicate", async (req, res): Promise<void> => {
       })
     : [];
 
-  // Combine and deduplicate
   const seen = new Set<number>();
   const duplicates: typeof reports = [];
   for (const r of [...PROXIMITY_MATCH, ...TITLE_MATCH]) {
@@ -226,7 +226,6 @@ router.get("/reports/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  // Fetch co-reporters
   const coReporters = await db
     .select({
       id: usersTable.id,
@@ -244,7 +243,6 @@ router.get("/reports/:id", async (req, res): Promise<void> => {
   });
 });
 
-// Escal add current user as a co-reporter
 router.post("/reports/:id/escalate", async (req, res): Promise<void> => {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Unauthorized" });
@@ -268,7 +266,6 @@ router.post("/reports/:id/escalate", async (req, res): Promise<void> => {
     return;
   }
 
-  // Cannot escalate your own report
   if (report.userId === req.user.id) {
     res.status(400).json({ error: "You are already the original reporter of this issue" });
     return;
@@ -383,6 +380,48 @@ router.delete("/reports/:id/confirm", async (req, res): Promise<void> => {
   res.json(UnconfirmReportResponse.parse({
     confirmationsCount: report?.confirmationsCount ?? 0,
     confirmed: false,
+  }));
+});
+
+router.post("/reports/:id/resolve", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = ResolveReportParams.safeParse({ id: raw });
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [freshUser] = await db
+    .select({ isVerifier: usersTable.isVerifier, isAdmin: usersTable.isAdmin })
+    .from(usersTable)
+    .where(eq(usersTable.id, req.user.id));
+
+  if (!freshUser?.isVerifier && !freshUser?.isAdmin) {
+    res.status(403).json({ error: "Forbidden: verifier access required" });
+    return;
+  }
+
+  await db
+    .update(reportsTable)
+    .set({
+      resolvedCount: sql`${reportsTable.resolvedCount} + 1`,
+      status: "resolved",
+    })
+    .where(eq(reportsTable.id, params.data.id));
+
+  const [report] = await db
+    .select({ resolvedCount: reportsTable.resolvedCount })
+    .from(reportsTable)
+    .where(eq(reportsTable.id, params.data.id));
+
+  res.json(ResolveReportResponse.parse({
+    resolvedCount: report?.resolvedCount ?? 1,
+    resolved: true,
   }));
 });
 

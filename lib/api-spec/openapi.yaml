@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Api
-  version: 0.2.0
+  version: 0.3.0
   description: GovHold civic accountability platform API
 servers:
   - url: /api
@@ -17,6 +17,8 @@ tags:
     description: User profile operations
   - name: admin
     description: Admin operations
+  - name: verifier
+    description: Verifier operations
   - name: analytics
     description: Analytics operations
 paths:
@@ -235,6 +237,65 @@ paths:
         "401":
           description: Unauthorized
 
+  /reports/{id}/resolve:
+    post:
+      operationId: resolveReport
+      tags: [reports]
+      summary: Mark a report as resolved (verifier only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Resolve result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolveReportResponse"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /verifier/apply:
+    post:
+      operationId: applyForVerifier
+      tags: [verifier]
+      summary: Apply to become a verifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifierApplicationBody"
+      responses:
+        "200":
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifierApplicationResponse"
+        "401":
+          description: Unauthorized
+
+  /verifier/my-application:
+    get:
+      operationId: getMyVerifierApplication
+      tags: [verifier]
+      summary: Get current user verifier application status
+      responses:
+        "200":
+          description: Application status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifierApplicationResponse"
+        "401":
+          description: Unauthorized
+
   /admin/reports:
     get:
       operationId: adminListReports
@@ -348,6 +409,81 @@ paths:
         "404":
           description: Not found
 
+  /admin/verifier-applications:
+    get:
+      operationId: adminListVerifierApplications
+      tags: [admin]
+      summary: Admin - list verifier applications
+      responses:
+        "200":
+          description: All applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminVerifierApplication"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /admin/verifier-applications/{id}/approve:
+    post:
+      operationId: adminApproveVerifierApplication
+      tags: [admin]
+      summary: Admin - approve a verifier application
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminVerifierApplication"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+  /admin/verifier-applications/{id}/reject:
+    post:
+      operationId: adminRejectVerifierApplication
+      tags: [admin]
+      summary: Admin - reject a verifier application
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectVerifierApplicationBody"
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminVerifierApplication"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
   /analytics:
     get:
       operationId: getAnalytics
@@ -389,7 +525,18 @@ components:
           nullable: true
         isAdmin:
           type: boolean
-      required: [id]
+        isVerifier:
+          type: boolean
+        verifierType:
+          type: string
+          nullable: true
+        verifierState:
+          type: string
+          nullable: true
+        verifierLga:
+          type: string
+          nullable: true
+      required: [id, isAdmin, isVerifier]
 
     GetCurrentAuthUserResponse:
       type: object
@@ -528,6 +675,8 @@ components:
           nullable: true
         confirmationsCount:
           type: integer
+        resolvedCount:
+          type: integer
         isHighlighted:
           type: boolean
         submittedBy:
@@ -551,7 +700,7 @@ components:
         createdAt:
           type: string
           format: date-time
-      required: [id, title, description, category, status, confirmationsCount, isHighlighted, createdAt]
+      required: [id, title, description, category, status, confirmationsCount, resolvedCount, isHighlighted, createdAt]
 
     CreateReportBody:
       type: object
@@ -597,6 +746,50 @@ components:
           type: boolean
       required: [confirmationsCount, confirmed]
 
+    ResolveReportResponse:
+      type: object
+      properties:
+        resolvedCount:
+          type: integer
+        resolved:
+          type: boolean
+      required: [resolvedCount, resolved]
+
+    VerifierApplicationBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [lga, state]
+        state:
+          type: string
+        lga:
+          type: string
+          nullable: true
+      required: [type, state]
+
+    VerifierApplicationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        state:
+          type: string
+        lga:
+          type: string
+          nullable: true
+        status:
+          type: string
+        reason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, type, state, status, createdAt]
+
     AdminUser:
       type: object
       properties:
@@ -613,10 +806,21 @@ components:
           nullable: true
         isAdmin:
           type: boolean
+        isVerifier:
+          type: boolean
+        verifierType:
+          type: string
+          nullable: true
+        verifierState:
+          type: string
+          nullable: true
+        verifierLga:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
-      required: [id, isAdmin, createdAt]
+      required: [id, isAdmin, isVerifier, createdAt]
 
     SetUserAdminBody:
       type: object
@@ -632,6 +836,50 @@ components:
           $ref: "#/components/schemas/ReportStatus"
         isHighlighted:
           type: boolean
+
+    AdminVerifierApplication:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        type:
+          type: string
+        state:
+          type: string
+        lga:
+          type: string
+          nullable: true
+        status:
+          type: string
+        reason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        applicant:
+          nullable: true
+          type: object
+          properties:
+            firstName:
+              type: string
+              nullable: true
+            lastName:
+              type: string
+              nullable: true
+            email:
+              type: string
+              nullable: true
+      required: [id, userId, type, state, status, createdAt]
+
+    RejectVerifierApplicationBody:
+      type: object
+      properties:
+        reason:
+          type: string
+          nullable: true
 
     AnalyticsCategoryCount:
       type: object

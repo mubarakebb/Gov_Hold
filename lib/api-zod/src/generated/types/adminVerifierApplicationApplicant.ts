@@ -5,8 +5,9 @@
  * GovHold civic accountability platform API
  * OpenAPI spec version: 0.3.0
  */
-import type { AuthUser } from "./authUser";
 
-export interface GetCurrentAuthUserResponse {
-  user: AuthUser | null;
-}
+export type AdminVerifierApplicationApplicant = {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+} | null;

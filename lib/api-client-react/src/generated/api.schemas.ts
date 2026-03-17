@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * GovHold civic accountability platform API
- * OpenAPI spec version: 0.2.0
+ * OpenAPI spec version: 0.3.0
  */
 export interface HealthStatus {
   status: string;
@@ -15,7 +15,11 @@ export interface AuthUser {
   firstName?: string | null;
   lastName?: string | null;
   profileImageUrl?: string | null;
-  isAdmin?: boolean;
+  isAdmin: boolean;
+  isVerifier: boolean;
+  verifierType?: string | null;
+  verifierState?: string | null;
+  verifierLga?: string | null;
 }
 
 export interface GetCurrentAuthUserResponse {
@@ -105,6 +109,7 @@ export interface Report {
   videoUrl?: string | null;
   userId?: string | null;
   confirmationsCount: number;
+  resolvedCount: number;
   isHighlighted: boolean;
   submittedBy?: ReportSubmittedBy;
   createdAt: string;
@@ -134,12 +139,45 @@ export interface ConfirmReportResponse {
   confirmed: boolean;
 }
 
+export interface ResolveReportResponse {
+  resolvedCount: number;
+  resolved: boolean;
+}
+
+export type VerifierApplicationBodyType =
+  (typeof VerifierApplicationBodyType)[keyof typeof VerifierApplicationBodyType];
+
+export const VerifierApplicationBodyType = {
+  lga: "lga",
+  state: "state",
+} as const;
+
+export interface VerifierApplicationBody {
+  type: VerifierApplicationBodyType;
+  state: string;
+  lga?: string | null;
+}
+
+export interface VerifierApplicationResponse {
+  id: number;
+  type: string;
+  state: string;
+  lga?: string | null;
+  status: string;
+  reason?: string | null;
+  createdAt: string;
+}
+
 export interface AdminUser {
   id: string;
   email?: string | null;
   firstName?: string | null;
   lastName?: string | null;
   isAdmin: boolean;
+  isVerifier: boolean;
+  verifierType?: string | null;
+  verifierState?: string | null;
+  verifierLga?: string | null;
   createdAt: string;
 }
 
@@ -150,6 +188,28 @@ export interface SetUserAdminBody {
 export interface AdminUpdateReportBody {
   status?: ReportStatus;
   isHighlighted?: boolean;
+}
+
+export type AdminVerifierApplicationApplicant = {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+} | null;
+
+export interface AdminVerifierApplication {
+  id: number;
+  userId: string;
+  type: string;
+  state: string;
+  lga?: string | null;
+  status: string;
+  reason?: string | null;
+  createdAt: string;
+  applicant?: AdminVerifierApplicationApplicant;
+}
+
+export interface RejectVerifierApplicationBody {
+  reason?: string | null;
 }
 
 export interface AnalyticsCategoryCount {
